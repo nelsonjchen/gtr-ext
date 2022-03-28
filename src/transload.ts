@@ -56,8 +56,9 @@ export async function transload(
 ) {
   console.log(`Transloading ${source} to ${destination}`);
   console.log(
-    `.\\azure-storage-azcopy.exe copy "${source}" "${destination}" --from-to BlobBlob --block-size-mb 50`
+    `.\\azure-storage-azcopy.exe copy "${source}/${name}" "${destination}" --from-to BlobBlob --block-size-mb 50`
   );
+  console.log(new Date().toLocaleString());
   return;
 
   const containerClient = new ContainerClient(destination);
