@@ -87,3 +87,43 @@ describe("transload", () => {
     );
   }, 60000);
 });
+
+describe("sourceToGtrProxySource", () => {
+  test("should return a proxied URL", () => {
+    const sourceUrl = "https://example.com/file.zip";
+    const expectedUrl = `${proxyBaseUrl}/p/example.com/file.zip`;
+    expect(sourceToGtrProxySource(sourceUrl, proxyBaseUrl)).toBe(expectedUrl);
+  });
+
+  test("should handle encoded slashes in source URL", () => {
+    const sourceUrl = "https://example.com/some%2Fpath/file.zip";
+    const expectedUrl = `${proxyBaseUrl}/p/example.com/some%252Fpath/file.zip`;
+    expect(sourceToGtrProxySource(sourceUrl, proxyBaseUrl)).toBe(expectedUrl);
+  });
+
+  test("should include encodedCookies if provided", () => {
+    const sourceUrl = "https://example.com/file.zip";
+    const cookies = "testcookies";
+    const expectedUrl = `${proxyBaseUrl}/p/example.com/file.zip?a=${cookies}`;
+    expect(sourceToGtrProxySource(sourceUrl, proxyBaseUrl, cookies)).toBe(
+      expectedUrl
+    );
+  });
+
+  test("should use & for cookies if query params already exist", () => {
+    const sourceUrl = "https://example.com/file.zip?param=value";
+    const cookies = "testcookies";
+    const expectedUrl = `${proxyBaseUrl}/p/example.com/file.zip?param=value&a=${cookies}`;
+    expect(sourceToGtrProxySource(sourceUrl, proxyBaseUrl, cookies)).toBe(
+      expectedUrl
+    );
+  });
+
+  test("should throw an error if the generated URL is too long", () => {
+    const sourceUrl = "https://example.com/file.zip";
+    const longCookies = "a".repeat(2048);
+    expect(() => {
+      sourceToGtrProxySource(sourceUrl, proxyBaseUrl, longCookies);
+    }).toThrow(/Proxy URL length \(\d+\) exceeds the maximum of 2048 bytes./);
+  });
+});

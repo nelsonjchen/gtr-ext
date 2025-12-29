@@ -17,7 +17,8 @@ interface JobPlan {
 
 export function sourceToGtrProxySource(
   source: string,
-  proxyBase?: string
+  proxyBase?: string,
+  encodedCookies?: string
 ): string {
   if (!proxyBase) {
     proxyBase = built_in_proxy_base;
@@ -25,7 +26,21 @@ export function sourceToGtrProxySource(
   // Replace all %2F with %252F and remove scheme
   const url = source.replace(/%2F/g, "%252F").replace(/https?:\/\//, "");
 
-  return `${proxyBase}/p/${url}`;
+  let proxyUrl = `${proxyBase}/p/${url}`;
+  if (encodedCookies) {
+    const separator = proxyUrl.includes("?") ? "&" : "?";
+    proxyUrl += `${separator}a=${encodeURIComponent(encodedCookies)}`;
+  }
+
+  // Azure imposes a 2 KiB limit on the length of the source URL in
+  // the Put Blob From Url API.
+  if (proxyUrl.length > 2048) {
+    throw new Error(
+      `Proxy URL length (${proxyUrl.length}) exceeds the maximum of 2048 bytes.`
+    );
+  }
+
+  return proxyUrl;
 }
 
 export async function createJobPlan(

@@ -9,6 +9,7 @@
 import { sourceToGtrProxySource, transload } from "./transload";
 import { Download } from "./state";
 import prettyBytes from "pretty-bytes";
+import pako from "pako";
 
 console.log("initialized gtr extension");
 
@@ -43,6 +44,26 @@ function getDownloads(): Promise<{ [key: string]: Download }> {
       }
       const state = result.downloads as { [key: string]: Download };
       resolve(state);
+    });
+  });
+}
+
+export function getEncodedCookies(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    chrome.cookies.getAll({ url }, (cookies) => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      // Skip NID cookie since it is very large and not needed for Google Takeout requests.
+      const filteredCookies = cookies.filter((cookie) => cookie.name !== "NID");
+      const cookieString = filteredCookies
+        .map((cookie) => `${cookie.name}=${cookie.value}`)
+        .join("; ");
+      const compressedData = pako.gzip(cookieString);
+      const b64encoded_string = btoa(
+        String.fromCharCode(...new Uint8Array(compressedData))
+      );
+      resolve(b64encoded_string);
     });
   });
 }
@@ -90,8 +111,16 @@ async function captureDownload(
   let prettySpeed: string = "";
   try {
     const now = new Date();
+
+    // gzip + base64 encode cookies
+    const encodedCookies = await getEncodedCookies(downloadItem.finalUrl);
+
     download = await transload(
-      sourceToGtrProxySource(downloadItem.finalUrl, proxyBaseUrl),
+      sourceToGtrProxySource(
+        downloadItem.finalUrl,
+        proxyBaseUrl,
+        encodedCookies
+      ),
       sas,
       downloadItem.filename,
       proxyBaseUrl
