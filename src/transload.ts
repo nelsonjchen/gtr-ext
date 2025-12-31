@@ -48,7 +48,7 @@ export async function createJobPlan(
   chunk_size_mb?: number
 ): Promise<JobPlan> {
   if (!chunk_size_mb) {
-    chunk_size_mb = 1000;
+    chunk_size_mb = 4000;
   }
   // Fetch HEAD of source
   const resp = await fetch(source_url, {
